@@ -2,6 +2,10 @@
 #define HASHTABLE_H
 
 #include <typeinfo>
+#include <exception>
+#include <iostream>
+#include <fstream>
+using namespace std;
 
 template<typename Tkey, typename Tvalue>
 class Pair;
@@ -14,10 +18,10 @@ class HashTable
 {
 public:
     friend class Pair<Tkey, Tvalue>;
-//    friend class Iterator<Tkey, Tvalue>;
+    friend class Iterator<Tkey, Tvalue>;
 
     typedef ::Pair<Tkey, Tvalue> Pair;
-//    typedef ::Iterator<Tkey, Tvalue> Iterator;
+    typedef ::Iterator<Tkey, Tvalue> Iterator;
     typedef unsigned int uint;
 
     HashTable()
@@ -40,7 +44,7 @@ public:
 
     ~HashTable()
     {
-        for (auto i = 0; i < _allocatedSize; i++)
+        for (uint i = 0; i < _allocatedSize; i++)
             if (_buckets[i])
                 delete _buckets[i];
 
@@ -56,10 +60,15 @@ public:
             expand();
 
         while (_buckets[index])
+        {
+            if (_buckets[index]->_key == key)
+                return;
+
             if (index < _allocatedSize - 1)
                 index++;
             else
                 index = 0;
+        }
 
         Pair *pair = new Pair(key, value);
         _buckets[index] = pair;
@@ -93,7 +102,10 @@ public:
             delete _buckets[index];
 
             _size--;
+
+            return true;
         }
+        return false;
     }
 
     void clear()
@@ -114,7 +126,7 @@ public:
         unsigned int counter = 0;
 
         if (typeid(Tvalue) == typeid(uint))
-            for (auto i = 0; i < _allocatedSize && counter < _size; i++)
+            for (uint i = 0; i < _allocatedSize && counter < _size; i++)
                 if (_buckets[i])
                 {
                     sum += static_cast<uint>(_buckets[i]->_value);
@@ -131,7 +143,17 @@ public:
         if (index)
             return _buckets[index]->_value;
 
-        return nullptr;
+        throw std::exception();
+    }
+
+    const Tvalue& getValue(const Tkey& key) const
+    {
+        uint index = contains(key);
+
+        if (index)
+            return _buckets[index]->_value;
+
+        throw std::exception();
     }
 
     bool operator==(const HashTable& otherTable) const
@@ -160,81 +182,66 @@ public:
         return true;
     }
 
+
     int getSize() const { return _size; }
 
     bool isEmpty() const { return _size == 0; }
 
 
-    class Iterator
+
+    friend ofstream &operator<<(ofstream &ofs, const HashTable& table)
     {
-    public:
-        Iterator() { _currPair = nullptr; }
+        Iterator *iter;
+        for(iter = table.begin(); iter != table.end(); iter++)
+            ofs << iter->currentKey << ' ' << iter->currentValue << '\n';
+        return ofs;
+    }
 
-        Iterator(Pair& pair) { _currPair = pair; }
-
-        Iterator(const Iterator& otherIter) { _currPair = otherIter._currPair; }
-
-
-        Iterator &operator++()
-        {
-            // TODO
-        }
-
-        Iterator operator++(int)
-        {
-            // TODO
-        }
-
-        Iterator &operator--()
-        {
-            // TODO
-        }
-
-        Iterator operator--(int)
-        {
-            // TODO
-        }
-
-        Iterator &operator=(const Iterator& otherIter)
-        {
-            if (this == &otherIter)
-                return *this;
-            _currPair = otherIter._currPair;
-            return *this;
-        }
-
-        Tkey currentKey() { return _currPair->key; }
-
-        Tvalue currentValue() { return _currPair->_value; }
-
-        // TODO
-
-    private:
-        Pair* _currPair;
-    };
-
-    Iterator iter;
-
-    Iterator begin() const
+    friend ifstream &operator>>(ifstream &ifs, HashTable& table)
     {
+        Tkey key;
+        Tvalue value;
+        while (!ifs.eof())
+        {
+            ifs >> key >> value;
+            table.add(key, value);
+        }
+        return ifs;
+    }
+
+
+    Iterator* begin() const
+    {
+        Iterator *iter;
         if (!isEmpty())
         {
             for (auto i = 0; i < _allocatedSize; i++)
                 if (_buckets[i])
-                    return Iterator(_buckets[i]);
+                {
+                    iter = new Iterator(_buckets[i]);
+                    break;
+                }
         }
-        return Iterator();
+        else
+            iter = new Iterator();
+        return iter;
     }
 
-    Iterator end() const
+    Iterator* end() const
     {
+        Iterator *iter;
         if (!isEmpty())
         {
             for (auto i = _allocatedSize - 1; i > 0; i--)
                 if (_buckets[i])
-                    return Iterator(_buckets[i]);
+                {
+                    iter = new Iterator(_buckets[i]);
+                    break;
+                }
         }
-        return Iterator();
+        else
+            iter = new Iterator();
+        return iter;
     }
 
 private:
@@ -246,7 +253,7 @@ private:
     {
         Pair **tmp = new Pair*[_allocatedSize + 32];
 
-        for (auto i = 0; i < _size; i++)
+        for (uint i = 0; i < _size; i++)
             tmp[i] = _buckets[i];
 
         delete[] _buckets;
@@ -285,7 +292,7 @@ private:
 
         while (newKey)
         {
-            result = newKey % 100;
+            result += newKey % 100;
             newKey /= 100;
         }
 
@@ -301,6 +308,7 @@ class Pair
 {
 public:
     friend class HashTable<Tkey, Tvalue>;
+    friend class Iterator<Tkey, Tvalue>;
 
     Pair(Tkey key, Tvalue value)
     {
@@ -314,6 +322,70 @@ public:
 private:
     Tkey _key;
     Tvalue _value;
+};
+
+
+template<typename Tkey, typename Tvalue>
+class Iterator
+{
+public:
+    friend class Pair<Tkey, Tvalue>;
+
+    typedef ::Pair<Tkey, Tvalue> Pair;
+    typedef unsigned int uint;
+
+    Iterator() { _currPair = nullptr; }
+
+    Iterator(Pair* pair) { _currPair = pair; }
+
+    Iterator(const Iterator& otherIter) { _currPair = otherIter._currPair; }
+
+
+    Iterator &operator++()
+    {
+        // TODO
+        uint index = this->countIndex(_currPair);
+
+        while (this->_buckets[index])
+        {
+            if (this->_buckets[index]->_key != _currPair && index != this->_allocatedSize - 1)
+                index++;
+            else if (this->_buckets[index]->_key != _currPair && index == this->_allocatedSize - 1)
+                index = 0;
+            else
+                return this->_buckets[index++];
+        }
+    }
+
+    Iterator operator++(int)
+    {
+        // TODO
+    }
+
+    Iterator &operator--()
+    {
+        // TODO
+    }
+
+    Iterator operator--(int)
+    {
+        // TODO
+    }
+
+    Iterator &operator=(const Iterator& otherIter)
+    {
+        if (this == &otherIter)
+            return *this;
+        _currPair = otherIter._currPair;
+        return *this;
+    }
+
+    Tkey currentKey() { return _currPair->_key; }
+
+    Tvalue currentValue() { return _currPair->_value; }
+
+private:
+    Pair* _currPair;
 };
 
 #endif // HASHTABLE_H
