@@ -14,10 +14,10 @@ class HashTable
 {
 public:
     friend class Pair<Tkey, Tvalue>;
-    friend class Iterator<Tkey, Tvalue>;
+//    friend class Iterator<Tkey, Tvalue>;
 
-    typedef Pair<Tkey, Tvalue> Pair;
-    typedef Iterator<Tkey, Tvalue> Iterator;
+    typedef ::Pair<Tkey, Tvalue> Pair;
+//    typedef ::Iterator<Tkey, Tvalue> Iterator;
     typedef unsigned int uint;
 
     HashTable()
@@ -73,9 +73,9 @@ public:
 
         while (_buckets[index])
         {
-            if (_buckets[index]._key != key && index != _allocatedSize - 1)
+            if (_buckets[index]->_key != key && index != _allocatedSize - 1)
                 index++;
-            else if (_buckets[index]._key != key && index == _allocatedSize - 1)
+            else if (_buckets[index]->_key != key && index == _allocatedSize - 1)
                 index = 0;
             else
                 return index;
@@ -111,33 +111,131 @@ public:
     uint getSumValue() const
     {
         unsigned int sum = 0;
+        unsigned int counter = 0;
 
         if (typeid(Tvalue) == typeid(uint))
-            for (auto i = 0; i < _allocatedSize; i++)
+            for (auto i = 0; i < _allocatedSize && counter < _size; i++)
                 if (_buckets[i])
-                    sum += static_cast<uint>(_buckets[i]->_value); // check
+                {
+                    sum += static_cast<uint>(_buckets[i]->_value);
+                    counter++;
+                }
 
         return sum;
     }
 
     const Tvalue& operator[](const Tkey& key) const
     {
-        // TODO
+        uint index = contains(key);
+
+        if (index)
+            return _buckets[index]->_value;
+
+        return nullptr;
     }
 
     bool operator==(const HashTable& otherTable) const
     {
-        // TODO
+        if (_size == otherTable._size)
+        {
+            for (auto i = 0; i < _allocatedSize; i++)
+                if (_buckets[i]->_key != otherTable._buckets[i]->_key)
+                    return false;
+
+            return true;
+        }
+        return false;
     }
 
     bool operator!=(const HashTable& otherTable) const
     {
-        // TODO
+        if (_size == otherTable._size)
+        {
+            for (auto i = 0; i < _allocatedSize; i++)
+                if (_buckets[i]->_key != otherTable._buckets[i]->_key)
+                    return true;
+
+            return false;
+        }
+        return true;
     }
 
     int getSize() const { return _size; }
 
     bool isEmpty() const { return _size == 0; }
+
+
+    class Iterator
+    {
+    public:
+        Iterator() { _currPair = nullptr; }
+
+        Iterator(Pair& pair) { _currPair = pair; }
+
+        Iterator(const Iterator& otherIter) { _currPair = otherIter._currPair; }
+
+
+        Iterator &operator++()
+        {
+            // TODO
+        }
+
+        Iterator operator++(int)
+        {
+            // TODO
+        }
+
+        Iterator &operator--()
+        {
+            // TODO
+        }
+
+        Iterator operator--(int)
+        {
+            // TODO
+        }
+
+        Iterator &operator=(const Iterator& otherIter)
+        {
+            if (this == &otherIter)
+                return *this;
+            _currPair = otherIter._currPair;
+            return *this;
+        }
+
+        Tkey currentKey() { return _currPair->key; }
+
+        Tvalue currentValue() { return _currPair->_value; }
+
+        // TODO
+
+    private:
+        Pair* _currPair;
+    };
+
+    Iterator iter;
+
+    Iterator begin() const
+    {
+        if (!isEmpty())
+        {
+            for (auto i = 0; i < _allocatedSize; i++)
+                if (_buckets[i])
+                    return Iterator(_buckets[i]);
+        }
+        return Iterator();
+    }
+
+    Iterator end() const
+    {
+        if (!isEmpty())
+        {
+            for (auto i = _allocatedSize - 1; i > 0; i--)
+                if (_buckets[i])
+                    return Iterator(_buckets[i]);
+        }
+        return Iterator();
+    }
 
 private:
     uint _size;
@@ -203,8 +301,6 @@ class Pair
 {
 public:
     friend class HashTable<Tkey, Tvalue>;
-    friend class Iterator<Tkey, Tvalue>;
-
 
     Pair(Tkey key, Tvalue value)
     {
@@ -218,53 +314,6 @@ public:
 private:
     Tkey _key;
     Tvalue _value;
-};
-
-
-template<typename Tkey, typename Tvalue>
-class Iterator
-{
-public:
-    friend class HashTable<Tkey, Tvalue>;
-    friend class Pair<Tkey, Tvalue>;
-    typedef HashTable<Tkey, Tvalue> HashTable;
-    typedef Pair<Tkey, Tvalue> Pair;
-
-
-    Iterator() { _currPair = nullptr; }
-
-    Iterator(Pair& pair) { _currPair = pair; }
-
-
-    Iterator &operator++()
-    {
-
-    }
-
-    Iterator operator++(int)
-    {
-
-    }
-
-    Iterator &operator--()
-    {
-
-    }
-
-    Iterator operator--(int)
-    {
-
-    }
-
-    Iterator &operator=(const Iterator& otherIter)
-    {
-
-    }
-
-    // TODO
-
-private:
-    Pair* _currPair;
 };
 
 #endif // HASHTABLE_H
