@@ -80,9 +80,9 @@ public:
         _size++;
     }
 
-    uint contains(const Tkey &key) const
+    int contains(const Tkey &key) const
     {
-        uint index = countIndex(key);
+        int index = countIndex(key);
 
         while (_buckets[index])
         {
@@ -94,14 +94,14 @@ public:
                 return index;
         }
 
-        return 0;
+        return -1;
     }
 
     bool remove(const Tkey &key)
     {
-        uint index = contains(key);
+        int index = contains(key);
 
-        if (index)
+        if (index > -1)
         {
             delete _buckets[index];
             _buckets[index] = nullptr;
@@ -170,7 +170,7 @@ public:
         {
             for (uint i = 0; i < _allocatedSize; i++)
                 if (_buckets[i])
-                    if (_buckets[i]->_key != otherTable._buckets[i]->_key)
+                    if (_buckets[i]->_key != otherTable._buckets[i]->_key && _buckets[i]->_value != otherTable._buckets[i]->_value)
                         return false;
 
             return true;
@@ -183,7 +183,7 @@ public:
         if (_size == otherTable._size)
         {
             for (uint i = 0; i < _allocatedSize; i++)
-                if (_buckets[i]->_key != otherTable._buckets[i]->_key)
+                if (_buckets[i]->_key != otherTable._buckets[i]->_key && _buckets[i]->_value != otherTable._buckets[i]->_value)
                     return true;
 
             return false;
@@ -260,7 +260,7 @@ private:
     {
         Pair **tmp = new Pair*[_allocatedSize + 32];
 
-        for (uint i = 0; i < _size; i++)
+        for (uint i = 0; i < _allocatedSize; i++)
             tmp[i] = _buckets[i];
 
         delete[] _buckets;
