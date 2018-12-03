@@ -29,6 +29,8 @@ public:
         _size = 0;
         _allocatedSize = 32;
         _buckets = new Pair*[32];
+        for (uint i = 0; i < _allocatedSize; i++)
+            _buckets[i] = nullptr;
     }
 
     HashTable(const HashTable& other)
@@ -37,9 +39,11 @@ public:
         _allocatedSize = other._allocatedSize;
         _buckets = new Pair*[_allocatedSize];
 
-        for (auto i = 0; i < other._allocatedSize; i++)
+        for (uint i = 0; i < other._allocatedSize; i++)
             if (other._buckets[i])
-                _buckets[i] = other._buckets[i];
+                _buckets[i] = new Pair(other._buckets[i]->_key, other._buckets[i]->_value);
+            else
+                _buckets[i] = nullptr;
     }
 
     ~HashTable()
@@ -111,7 +115,7 @@ public:
 
     void clear()
     {
-        for (auto i = 0; i < _allocatedSize; i++)
+        for (uint i = 0; i < _allocatedSize; i++)
             if (_buckets[i])
             {
                 delete _buckets[i];
@@ -164,9 +168,10 @@ public:
     {
         if (_size == otherTable._size)
         {
-            for (auto i = 0; i < _allocatedSize; i++)
-                if (_buckets[i]->_key != otherTable._buckets[i]->_key)
-                    return false;
+            for (uint i = 0; i < _allocatedSize; i++)
+                if (_buckets[i])
+                    if (_buckets[i]->_key != otherTable._buckets[i]->_key)
+                        return false;
 
             return true;
         }
@@ -177,7 +182,7 @@ public:
     {
         if (_size == otherTable._size)
         {
-            for (auto i = 0; i < _allocatedSize; i++)
+            for (uint i = 0; i < _allocatedSize; i++)
                 if (_buckets[i]->_key != otherTable._buckets[i]->_key)
                     return true;
 
@@ -186,23 +191,21 @@ public:
         return true;
     }
 
-
     int getSize() const { return _size; }
 
     bool isEmpty() const { return _size == 0; }
 
-
-
     friend ofstream &operator<<(ofstream &ofs, const HashTable& table)
     {
-        Iterator *iter;
-        for(iter = table.begin(); iter != table.end(); iter++)
-            ofs << iter->currentKey << ' ' << iter->currentValue << '\n';
+        for(uint i = 0; i < table._allocatedSize; i++)
+            if (table._buckets[i])
+                ofs << table._buckets[i]->_key << ' ' << table._buckets[i]->_value << '\n';
         return ofs;
     }
 
     friend ifstream &operator>>(ifstream &ifs, HashTable& table)
     {
+        table.clear();
         Tkey key;
         Tvalue value;
         while (!ifs.eof())
@@ -270,7 +273,7 @@ private:
         {
             Pair **tmp = new Pair*[_allocatedSize];
 
-            for (auto i = 0; i < _allocatedSize; i++)
+            for (uint i = 0; i < _allocatedSize; i++)
                 if (_buckets[i])
                 {
                     tmp[i] = _buckets[i];
@@ -279,11 +282,11 @@ private:
 
             delete[] _buckets;
 
-            _buckets = new Pair[_allocatedSize - 32];
+            _buckets = new Pair*[_allocatedSize - 32];
 
             for (auto i = 0; i < _allocatedSize; i++)
-                if (tmp[i]._key)
-                    add(tmp[i]._key, tmp[i]._value);
+                if (tmp[i]->_key)
+                    add(tmp[i]->_key, tmp[i]->_value);
         }
     }
 
@@ -313,6 +316,7 @@ class Pair
 public:
     friend class HashTable<Tkey, Tvalue>;
     friend class Iterator<Tkey, Tvalue>;
+    friend ofstream &operator<<(ofstream &ofs, const HashTable<Tkey, Tvalue>& table);
 
     Pair(Tkey key, Tvalue value)
     {
