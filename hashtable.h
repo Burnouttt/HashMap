@@ -100,6 +100,7 @@ public:
         if (index)
         {
             delete _buckets[index];
+            _buckets[index] = nullptr;
 
             _size--;
 
@@ -112,7 +113,10 @@ public:
     {
         for (auto i = 0; i < _allocatedSize; i++)
             if (_buckets[i])
+            {
                 delete _buckets[i];
+                _buckets[i] = nullptr;
+            }
 
         delete[] _buckets;
 
