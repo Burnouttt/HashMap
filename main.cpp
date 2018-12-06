@@ -16,12 +16,12 @@ int main(int argc, char *argv[])
     assert(table.contains(10));
     assert(table.getSize() == 1);
     assert(table.getSumValue() == 25);
-    assert(table.getValue(10) == 25);
+    assert(table[10] == 25);
 
     table.add(26, 242);
     assert(table.contains(26));
     assert(table.getSize() == 2);
-    assert(table.getValue(26) == 242);
+    assert(table[26] == 242);
     assert(table.getSumValue() == 267);
     assert(table[10] == 25);
 
@@ -30,17 +30,23 @@ int main(int argc, char *argv[])
     ofs << table;
     ofs.close();
 
+    HashTable<int, unsigned int> fileTable;
+
     std::ifstream ifs;
     ifs.open("file.txt");
-    ifs >> table;
+    ifs >> fileTable;
     ifs.close();
-    assert(table.getSize() == 2);
-    assert(table.getSumValue() == 267);
-    assert(table.contains(10));
-    assert(table.contains(26));
+    assert(table == fileTable);
 
     HashTable<int, unsigned int> copyTable(table);
     assert(table == copyTable);
+
+    Iterator<int, unsigned int> iter = table.begin();
+    assert(iter.currentKey() == 10);
+    int first = iter.currentKey();
+    iter++;
+    int second = iter.currentKey();
+    assert(first != second);
 
     table.remove(10);
     assert(table.getSumValue() == 242);
@@ -57,6 +63,12 @@ int main(int argc, char *argv[])
     copyTable.clear();
     assert(copyTable.contains(25) == -1);
     assert(copyTable.isEmpty());
+
+    for (int i = 0; i < 32; i++)
+        table.add(i, 250);
+
+    table.add(70, 40);
+    assert(table[70] == 40);
 
     return 0;
 //    QApplication a(argc, argv);
