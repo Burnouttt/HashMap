@@ -22,14 +22,13 @@ public:
 
     typedef ::Pair<Tkey, Tvalue> Pair;
     typedef ::Iterator<Tkey, Tvalue> Iterator;
-    typedef unsigned int uint;
 
     HashTable()
     {
         _size = 0;
         _allocatedSize = 32;
         _buckets = new Pair*[32];
-        for (uint i = 0; i < _allocatedSize; i++)
+        for (uint32_t i = 0; i < _allocatedSize; i++)
             _buckets[i] = nullptr;
     }
 
@@ -39,7 +38,7 @@ public:
         _allocatedSize = other._allocatedSize;
         _buckets = new Pair*[_allocatedSize];
 
-        for (uint i = 0; i < other._allocatedSize; i++)
+        for (uint32_t i = 0; i < other._allocatedSize; i++)
             if (other._buckets[i])
                 _buckets[i] = new Pair(other._buckets[i]->_key, other._buckets[i]->_value);
             else
@@ -48,9 +47,12 @@ public:
 
     ~HashTable()
     {
-        for (uint i = 0; i < _allocatedSize; i++)
-            if (_buckets[i])
-                delete _buckets[i];
+        if (_size != 0)
+        {
+            for (uint32_t i = 0; i < _allocatedSize; i++)
+                if (_buckets[i])
+                    delete _buckets[i];
+        }
 
         delete[] _buckets;
     }
@@ -61,12 +63,15 @@ public:
         if (_size == _allocatedSize)
             expand();
 
-        uint index = countIndex(key);
+        uint32_t index = countIndex(key);
 
         while (_buckets[index])
         {
             if (_buckets[index]->_key == key)
+            {
+                _buckets[index]->_value = value;
                 return;
+            }
 
             if (index < _allocatedSize - 1)
                 index++;
@@ -82,7 +87,7 @@ public:
 
     int contains(const Tkey &key) const
     {
-        uint index = countIndex(key);
+        uint32_t index = countIndex(key);
 
         while (_buckets[index])
         {
@@ -116,14 +121,12 @@ public:
 
     void clear()
     {
-        for (uint i = 0; i < _allocatedSize; i++)
+        for (uint32_t i = 0; i < _allocatedSize; i++)
             if (_buckets[i])
             {
                 delete _buckets[i];
                 _buckets[i] = nullptr;
             }
-
-        delete[] _buckets;
 
         _size = 0;
 
@@ -133,21 +136,22 @@ public:
 
 
     // for the task
-    uint getSumValue() const
+    uint32_t getSumValue() const
     {
         unsigned int sum = 0;
         unsigned int counter = 0;
 
-        if (typeid(Tvalue) == typeid(uint))
-            for (uint i = 0; i < _allocatedSize && counter < _size; i++)
+        if (typeid(Tvalue) == typeid(uint32_t))
+            for (uint32_t i = 0; i < _allocatedSize && counter < _size; i++)
                 if (_buckets[i])
                 {
-                    sum += static_cast<uint>(_buckets[i]->_value);
+                    sum += static_cast<uint32_t>(_buckets[i]->_value);
                     counter++;
                 }
 
         return sum;
     }
+
 
     // overloaded operators
     const Tvalue& operator[](const Tkey& key) const
@@ -164,7 +168,7 @@ public:
     {
         if (_size == otherTable._size)
         {
-            for (uint i = 0; i < _allocatedSize; i++)
+            for (uint32_t i = 0; i < _allocatedSize; i++)
                 if (_buckets[i])
                     if (_buckets[i]->_key != otherTable._buckets[i]->_key && _buckets[i]->_value != otherTable._buckets[i]->_value)
                         return false;
@@ -178,7 +182,7 @@ public:
     {
         if (_size == otherTable._size)
         {
-            for (uint i = 0; i < _allocatedSize; i++)
+            for (uint32_t i = 0; i < _allocatedSize; i++)
                 if (_buckets[i]->_key != otherTable._buckets[i]->_key && _buckets[i]->_value != otherTable._buckets[i]->_value)
                     return true;
 
@@ -187,23 +191,28 @@ public:
         return true;
     }
 
-    friend ofstream &operator<<(ofstream &ofs, const HashTable& table)
+    friend ofstream &operator<<(ofstream &ofs, const HashTable<Tkey, Tvalue>& table)
     {
-        for(uint i = 0; i < table._allocatedSize; i++)
+        ofs << table.getSize() << '\n';
+        for(uint32_t i = 0; i < table._allocatedSize; i++)
             if (table._buckets[i])
                 ofs << table._buckets[i]->_key << ' ' << table._buckets[i]->_value << '\n';
         return ofs;
     }
 
-    friend ifstream &operator>>(ifstream &ifs, HashTable& table)
+    friend ifstream &operator>>(ifstream &ifs, HashTable<Tkey, Tvalue>& table)
     {
         table.clear();
         Tkey key;
         Tvalue value;
-        while (!ifs.eof())
+
+        uint32_t counter = 0;
+        ifs >> counter;
+        while (counter)
         {
             ifs >> key >> value;
             table.add(key, value);
+            counter--;
         }
         return ifs;
     }
@@ -214,7 +223,7 @@ public:
     {
         if (!isEmpty())
         {
-            for (int i = 0; i < _allocatedSize; i++)
+            for (uint32_t i = 0; i < _allocatedSize; i++)
                 if (_buckets[i])
                     return Iterator(_buckets[i], i, _buckets, _allocatedSize);
         }
@@ -234,27 +243,27 @@ public:
 
 
     // size checkers
-    int getSize() const { return _size; }
+    uint32_t getSize() const { return _size; }
 
     bool isEmpty() const { return _size == 0; }
 
 private:
-    uint _size;
-    uint _allocatedSize;
+    uint32_t _size;
+    uint32_t _allocatedSize;
     Pair **_buckets;
 
     // array size control
     void expand()
     {
         Pair **tmp = new Pair*[_allocatedSize + 32];
-        for (uint i = 0; i < _allocatedSize + 32; i++)
+        for (uint32_t i = 0; i < _allocatedSize + 32; i++)
             tmp[i] = nullptr;
 
-        for (uint i = 0; i < _allocatedSize; i++)
+        for (uint32_t i = 0; i < _allocatedSize; i++)
             if (_buckets[i])
                 tmp[i] = new Pair(_buckets[i]->_key, _buckets[i]->_value);
 
-        for (uint i = 0; i < _allocatedSize; i++)
+        for (uint32_t i = 0; i < _allocatedSize; i++)
             if (_buckets[i])
             {
                 delete _buckets[i];
@@ -266,14 +275,14 @@ private:
         _allocatedSize += 32;
 
         _buckets = new Pair*[_allocatedSize];
-        for (uint i = 0; i < _allocatedSize; i++)
+        for (uint32_t i = 0; i < _allocatedSize; i++)
             _buckets[i] = nullptr;
 
-        for (uint i = 0; i < _allocatedSize - 32; i++)
+        for (uint32_t i = 0; i < _allocatedSize - 32; i++)
             if (tmp[i])
                 add(tmp[i]->_key, tmp[i]->_value);
 
-        for (uint i = 0; i < _allocatedSize; i++)
+        for (uint32_t i = 0; i < _allocatedSize; i++)
             delete tmp[i];
         delete[] tmp;
     }
@@ -282,42 +291,42 @@ private:
     {
         if (_size + 32 < _allocatedSize)
         {
-            Pair **tmp = new Pair*[_allocatedSize];
-            for (uint i = 0; i < _allocatedSize; i++)
+            Pair **tmp = new Pair*[_allocatedSize - 32];
+            for (uint32_t i = 0; i < _allocatedSize - 32; i++)
                 tmp[i] = nullptr;
 
-            for (uint i = 0; i < _allocatedSize; i++)
+            uint32_t counter = 0;
+
+            for (uint32_t i = 0; i < _allocatedSize; i++)
                 if (_buckets[i])
                 {
-                    tmp[i] = new Pair(_buckets[i]->_key, _buckets[i]->_value);
+                    tmp[counter++] = new Pair(_buckets[i]->_key, _buckets[i]->_value);
                     delete _buckets[i];
-                    _buckets[i] = nullptr;
                 }
             delete[] _buckets;
             _size = 0;
 
-            _buckets = new Pair*[_allocatedSize - 32];
-            for (uint i = 0; i < _allocatedSize - 32; i++)
+            _allocatedSize -= 32;
+
+            _buckets = new Pair*[_allocatedSize];
+            for (uint32_t i = 0; i < _allocatedSize; i++)
                 _buckets[i] = nullptr;
 
-            for (uint i = 0; i < _allocatedSize; i++)
-                if (tmp[i])
-                    add(tmp[i]->_key, tmp[i]->_value);
+            for (uint32_t i = 0; i < counter; i++)
+                add(tmp[i]->_key, tmp[i]->_value);
 
-            for (uint i = 0; i < _allocatedSize; i++)
+            for (uint32_t i = 0; i < _allocatedSize; i++)
                 delete tmp[i];
-            delete[] tmp;
-
-            _allocatedSize -= 32;
+            delete[] tmp;     
         }
     }
 
 
     // hash functions & index counter
-    uint hash(int key) const
+    uint32_t hash(int key) const
     {
-        uint result = 0;
-        uint newKey = static_cast<uint>(key*key);
+        uint32_t result = 0;
+        uint32_t newKey = static_cast<uint32_t>(key*key);
 
         while (newKey)
         {
@@ -328,7 +337,17 @@ private:
         return result;
     }
 
-    uint countIndex(Tkey key) const { return hash(key) % _allocatedSize; }
+    uint32_t hash(string key) const
+    {
+        uint32_t result = 0;
+
+        for (uint32_t i = 0; i < key.length(); i++)
+            result += 31*i + static_cast<uint32_t>(key[i]);
+
+        return result;
+    }
+
+    uint32_t countIndex(Tkey key) const { return hash(key) % _allocatedSize; }
 };
 
 
@@ -342,11 +361,8 @@ public:
 
     Pair(Tkey key, Tvalue value)
     {
-        if (key && value)
-        {
-            _key = key;
-            _value = value;
-        }
+        _key = key;
+        _value = value;
     }
 
 private:
@@ -363,15 +379,20 @@ public:
     friend class HashTable<Tkey, Tvalue>;
 
     typedef ::Pair<Tkey, Tvalue> Pair;
-    typedef unsigned int uint;
 
     Iterator() { _currPair = nullptr; _index = -1; }
 
-    Iterator(const Iterator& otherIter) { _currPair = otherIter._currPair; _index = otherIter._index; }
+    Iterator(const Iterator& otherIter)
+    {
+        _currPair = otherIter._currPair;
+        _index = otherIter._index;
+        _buckets = otherIter._buckets;
+        _allocatedSize = otherIter._allocatedSize;
+    }
 
     Iterator &operator++()
     {
-        if (_currPair)
+        if (_currPair && _index < _allocatedSize)
         {
             int i;
             for (i = _index + 1; i < _allocatedSize && !_buckets[i]; i++);
